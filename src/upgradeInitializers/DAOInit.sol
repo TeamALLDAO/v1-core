@@ -14,7 +14,7 @@ contract DAOInit {
     }
 
     function init() external {
-        IDiamond.FacetCut memory facecut = "";
-        LibDiamond.diamondCut(facecut, init, data);
+        // IDiamond.FacetCut memory facecut = "";
+        // LibDiamond.diamondCut(facecut, init, data);
     }
 }

@@ -11,8 +11,8 @@ import {IStorage} from "./interfaces/IStorage.sol";
 contract Storage is IStorage {
     using SafeERC20 for IERC20;
 
-    error Storage__OnlyOwnerCanCall();
-    error Storage__CurrencyCannotBeZeroAddress();
+    error OnlyOwnerCanCall();
+    error CurrencyCannotBeZeroAddress();
 
     address public immutable owner;
     uint256 public constant BASIS_POINT = 10000;
@@ -48,14 +48,14 @@ contract Storage is IStorage {
 
     /// @inheritdoc	IStorage
     function setCurrency(address _currency) external {
-        if (msg.sender != owner) revert Storage__OnlyOwnerCanCall();
-        if (currency == address(0)) revert Storage__CurrencyCannotBeZeroAddress();
+        if (msg.sender != owner) revert OnlyOwnerCanCall();
+        if (currency == address(0)) revert CurrencyCannotBeZeroAddress();
         currency = _currency;
     }
 
     /// @inheritdoc	IStorage
     function setPrice(uint256 numerator) external {
-        if (msg.sender != owner) revert Storage__OnlyOwnerCanCall();
+        if (msg.sender != owner) revert OnlyOwnerCanCall();
         priceNumerator = numerator;
     }
 

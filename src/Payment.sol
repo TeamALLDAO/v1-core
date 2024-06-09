@@ -12,14 +12,14 @@ import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 contract Payments is IPayment {
     using SafeERC20 for IERC20;
 
-    error Payments__PayerCannotBePayee();
-    error Payments__PayeeCannotBeZeroAddress();
-    error Payments__CurrencyCannotBeZeroAddress();
-    error Payments__TotalPaymentAmountCannotBeZero();
-    error Payments__OnlyPayerCanCancelPayment();
-    error Payments__OnlyPayeeCanClaim();
-    error Payments__InvalidPaymentState();
-    error Payments__OnlyOwnerCanCall();
+    error PayerCannotBePayee();
+    error PayeeCannotBeZeroAddress();
+    error CurrencyCannotBeZeroAddress();
+    error TotalPaymentAmountCannotBeZero();
+    error OnlyPayerCanCancelPayment();
+    error OnlyPayeeCanClaim();
+    error InvalidPaymentState();
+    error OnlyOwnerCanCall();
 
     uint24 public feePercent = 300;
     uint16 public constant BASIS_POINT = 10000;
@@ -98,10 +98,10 @@ contract Payments is IPayment {
         uint256 id = currentPaymentId;
         uint256 totalPaymentAmount = (paymentRequest.numberOfInstallments * paymentRequest.amountPerInstallment);
 
-        if (paymentRequest.payee == creator) revert Payments__PayerCannotBePayee();
-        if (paymentRequest.payee == address(0)) revert Payments__PayeeCannotBeZeroAddress();
-        if (paymentRequest.currency == address(0)) revert Payments__CurrencyCannotBeZeroAddress();
-        if (totalPaymentAmount == 0) revert Payments__TotalPaymentAmountCannotBeZero();
+        if (paymentRequest.payee == creator) revert PayerCannotBePayee();
+        if (paymentRequest.payee == address(0)) revert PayeeCannotBeZeroAddress();
+        if (paymentRequest.currency == address(0)) revert CurrencyCannotBeZeroAddress();
+        if (totalPaymentAmount == 0) revert TotalPaymentAmountCannotBeZero();
 
         Payment memory payment = Payment({
             paymentState: PaymentState.Paying,
@@ -129,7 +129,7 @@ contract Payments is IPayment {
         uint256 installments = payment.numberOfInstallments;
         uint256 totalAmount = payment.amountPerInstallment * payment.numberOfInstallments;
 
-        if (payment.payer != canceller) revert Payments__OnlyPayerCanCancelPayment();
+        if (payment.payer != canceller) revert OnlyPayerCanCancelPayment();
 
         for (uint256 i; i < installments; ++i) {
             if (block.timestamp < payment.nextInstallmentTimestamp) break;
@@ -152,7 +152,7 @@ contract Payments is IPayment {
         uint256 amountDue;
         uint256 installments = payment.numberOfInstallments;
 
-        if (payment.payee != claimer) revert Payments__OnlyPayeeCanClaim();
+        if (payment.payee != claimer) revert OnlyPayeeCanClaim();
 
         for (uint256 i; i < installments; ++i) {
             if (block.timestamp < payment.nextInstallmentTimestamp) break;
@@ -173,7 +173,7 @@ contract Payments is IPayment {
     }
 
     function _enforceInState(PaymentState paymentState, Payment memory payment) private pure {
-        if (payment.paymentState != paymentState) revert Payments__InvalidPaymentState();
+        if (payment.paymentState != paymentState) revert InvalidPaymentState();
     }
 
     // View Functions
@@ -193,7 +193,7 @@ contract Payments is IPayment {
     // Owner Function
 
     function setFee(uint24 _feePercent) external {
-        if (msg.sender != owner) revert Payments__OnlyOwnerCanCall();
+        if (msg.sender != owner) revert OnlyOwnerCanCall();
         feePercent = _feePercent;
     }
 }

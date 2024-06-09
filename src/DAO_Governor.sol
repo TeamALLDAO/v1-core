@@ -53,11 +53,12 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
 
     constructor(string memory _uri, LibGovernance.Deployment[] memory deployments, address _register) {
         // LibGovernance.addDeployment();
-        bytes memory data = abi.encodeWithSignature(signatureString, arg);
-        LibDiamond.initializeDiamondCut(init, data);
+        // bytes memory data = abi.encodeWithSignature(signatureString, arg);
+        // LibDiamond.initializeDiamondCut(init, data);
         LibDiamond.setContractOwner(address(this));
         LibGovernance.setURI(_uri);
         LibGovernance.setRegister(_register);
+        // deploy the token
     }
 
     /// Public and External Functions

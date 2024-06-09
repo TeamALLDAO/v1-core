@@ -11,4 +11,6 @@ abstract contract ALLDAO_Governor is IALLDAO_Governor, DAO_Governor {
     function createDAO(string memory daoName, Shares[] memory shares) external virtual {}
 
     function isChildDao(address) external view virtual returns (bool) {}
+
+    function getDao(address) external view virtual returns (bool) {}
 }

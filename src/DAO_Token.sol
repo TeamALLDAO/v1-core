@@ -2,18 +2,16 @@
 
 pragma solidity 0.8.19;
 
-import {EIP712} from "openzeppelin/utils/cryptography/EIP712.sol";
 import {SafeCast} from "openzeppelin/utils/math/SafeCast.sol";
 import {Strings} from "openzeppelin/utils/Strings.sol";
-import {ERC20} from "openzeppelin/token/ERC20/ERC20.sol";
-import {Votes} from "openzeppelin/governance/utils/Votes.sol";
+import {ERC20Votes} from "openzeppelin/token/ERC20/extensions/ERC20Votes.sol";
 import {IDAO_Token} from "./interfaces/IDAO_Token.sol";
 import {IEventRegister} from "./interfaces/IEventRegister.sol";
 
 /// @title the governance token used by ALLDAO protocol
 /// @author Mfon Stephen
 /// @dev this token implements the erc1155 token standard
-contract DAO_Token is IDAO_Token, Votes, ERC20 {
+contract DAO_Token is IDAO_Token, ERC20Votes {
     using Strings for uint256;
 
     /// @notice the alldao owner address
@@ -33,7 +31,7 @@ contract DAO_Token is IDAO_Token, Votes, ERC20 {
         _;
     }
 
-    constructor(string memory _uri, address _register, address _owner) EIP712("DAO_Token", "1") ERC20(_uri) {
+    constructor(address _register, address _owner, string memory _name, string memory _symbol) {
         owner = _owner;
         register = _register;
     }
@@ -56,13 +54,6 @@ contract DAO_Token is IDAO_Token, Votes, ERC20 {
 
     // External Functions
 
-    /// @notice Explain to an end user what this does
-    /// @dev Explain to a developer any extra details
-    /// @param `address` owner
-    function owner() external view returns (address) {
-        return owner;
-    }
-
     /// @notice function to mint new tokens
     /// @dev can only be called by the owner of the token i.e the owner
     /// @param tokenId the id of the token to mint
@@ -70,44 +61,12 @@ contract DAO_Token is IDAO_Token, Votes, ERC20 {
     /// @param to the address to mint the token to
     /// @param data optional data to pass down to `_afterTokenTransfer`
     function mint(uint256 tokenId, uint256 amount, address to, bytes memory data) external onlyOwner {
-        _mint(to, tokenId, amount, data);
+        _mint(to, amount, data);
     }
 
-    /// @notice function to set the uri for a particular tokenId
-    /// @dev the tokenURI is set for individual tokenIds
-    /// @param tokenId the id of the token to set the uri
-    /// @param tokenURI the new uri to set
-    function setURI(uint256 tokenId, string memory tokenURI) external onlyOwner {
-        _setURI(tokenId, tokenURI);
-    }
-
-    /// @notice function to set the base uri for the collection
-    /// @dev if the individual tokenURI is not set then the uri is the baseURI + tokenId + ".json"
-    /// @param baseURI the baseURI to set
-    function setBaseURI(string memory baseURI) external onlyOwner {
-        _setBaseURI(baseURI);
-    }
 
     function setRegister(address _register) external onlyOwner {
         register = _register;
-    }
-
-    /// @notice function to get the total supply of the governance
-    /// @dev exposes the internal function `_getTotalSupply()`
-    /// @return `uint256`
-    function getTotalSupply() external view returns (uint256) {
-        return _getTotalSupply();
-    }
-
-    /// @notice function to get the uri for a tokenId
-    /// @dev concatenates the baseURI and the tokenId according to opensea standard
-    /// @param tokenId the id of the token
-    /// @return `string`
-    function uri(uint256 tokenId) public view override(ERC20, IDAO_Token) returns (string memory) {
-        string memory tokenURI = _tokenURIs[tokenId];
-
-        // If token URI is not set, concatenate base URI and tokenURI (via abi.encodePacked).
-        return bytes(tokenURI).length > 0 ? string(abi.encodePacked(_baseURI, tokenId.toString(), ".json")) : tokenURI;
     }
 
     // Internal Functions
@@ -127,16 +86,16 @@ contract DAO_Token is IDAO_Token, Votes, ERC20 {
         uint256[] memory amounts,
         bytes memory data
     ) internal override {
-        for (uint256 i; i < ids.length; ++i) {
-            if (ids[i] == 0) {
-                _transferVotingUnits(from, to, amounts[i]);
-                uint256 fromBalance = balanceOf(from, 0);
-                uint256 toBalance = balanceOf(to, 0);
-                emit VoteUpdate(from, fromBalance, to, toBalance);
-                IEventRegister(register).registerVoteUpdate(address(this), from, fromBalance, to, toBalance);
-            }
-        }
-        super._afterTokenTransfer(operator, from, to, ids, amounts, data);
+        // for (uint256 i; i < ids.length; ++i) {
+        //     if (ids[i] == 0) {
+        //         _transferVotingUnits(from, to, amounts[i]);
+        //         uint256 fromBalance = balanceOf(from, 0);
+        //         uint256 toBalance = balanceOf(to, 0);
+        //         emit VoteUpdate(from, fromBalance, to, toBalance);
+        //         IEventRegister(register).registerVoteUpdate(address(this), from, fromBalance, to, toBalance);
+        //     }
+        // }
+        // super._afterTokenTransfer(operator, from, to, ids, amounts, data);
     }
 
     /// @notice function that tracks the user dao shares
@@ -144,15 +103,7 @@ contract DAO_Token is IDAO_Token, Votes, ERC20 {
     /// @param account account to get the voting units
     /// @return `uint256`
     function _getVotingUnits(address account) internal view override returns (uint256) {
-        return balanceOf(account, 0);
+        return balanceOf(account);
     }
 
-    function _setURI(uint256 tokenId, string memory tokenURI) internal virtual {
-        _tokenURIs[tokenId] = tokenURI;
-    }
-
-    /// @dev Sets `baseURI` as the `_baseURI` for all tokens
-    function _setBaseURI(string memory baseURI) internal virtual {
-        _baseURI = baseURI;
-    }
 }
