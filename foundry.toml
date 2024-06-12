@@ -1,11 +1,11 @@
 [profile.default]
 src = "src"
 out = "out"
-libs = ["lib"]
+libs = ["node_modules"]
 remappings = [
-    "ds-test/=lib/forge-std/lib/ds-test/src/",
-    "forge-std/=lib/forge-std/src",
-    "openzeppelin/=lib/openzeppelin-contracts/contracts"
+    "ds-test/=node_modules/forge-std/lib/ds-test/src/",
+    "forge-std/=node_modules/forge-std/src",
+    "openzeppelin/=node_modules/@openzeppelin/contracts"
 ]
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config

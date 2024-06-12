@@ -1,0 +1,22 @@
+{
+  "name": "v1-core",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Mfon Stephen Nwa",
+  "license": "ISC",
+  "devDependencies": {
+    "forge-std": "github:foundry-rs/forge-std#v1.8.2"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.2"
+  }
+}

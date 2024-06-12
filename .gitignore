@@ -12,3 +12,4 @@ out/
 
 # todo actions
 todo.md
+/node_modules
