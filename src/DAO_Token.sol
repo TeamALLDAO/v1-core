@@ -1,6 +1,6 @@
 // SPDX-Licence-Identifier: UNLICENSED
 
-pragma solidity 0.8.19;
+pragma solidity 0.8.20;
 
 import {SafeCast} from "openzeppelin/utils/math/SafeCast.sol";
 import {Strings} from "openzeppelin/utils/Strings.sol";
