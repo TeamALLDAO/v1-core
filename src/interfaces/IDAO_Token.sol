@@ -1,14 +1,15 @@
 // SPDX-Licence-Identifier: UNLICENSED
 
-pragma solidity 0.8.19;
+pragma solidity 0.8.20;
 
-import {IERC1155} from "openzeppelin/token/ERC1155/IERC1155.sol";
-import {IVotes} from "openzeppelin/governance/utils/IVotes.sol";
+import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
+import {IVotes} from "openzeppelin/governance/utils/IVotes.sol"
 
 /// @title the interface for the DAO_Token
 /// @author Mfon Stephen Nwa
 /// @dev this interface is just the combination of the IERC1155 and IVotes interfaces
-interface IDAO_Token is IERC1155, IVotes {
+interface IDAO_Token is IERC20, IERC20Metadata, IVotes {
     /// @notice the event emitted when the token index zero is transfered
     /// @dev it is used to track the daos that a user belongs to
     /// @param sender the address of the person sending
@@ -17,18 +18,9 @@ interface IDAO_Token is IERC1155, IVotes {
     /// @param recieverBalance the new balance of the reciever
     event VoteUpdate(address sender, uint256 senderBalance, address reciever, uint256 recieverBalance);
 
-    /// @notice returns the uri string
-    /// @param tokenId the tokenId of the token to view the uri
-    /// @return `string` the uri of the token
-    function uri(uint256 tokenId) external view returns (string memory);
-
     function owner() external view returns (address);
 
     function getTotalSupply() external view returns (uint256);
-
-    function setBaseURI(string memory baseURI) external;
-
-    function setURI(uint256 tokenId, string memory tokenURI) external;
 
     function setRegister(address _register) external;
 

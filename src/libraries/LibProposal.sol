@@ -1,6 +1,6 @@
 // SPDX-Licence-Identifier: UNLICENSED
 
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 library LibProposal {
     bytes32 constant PROPOSAL_STORAGE_POSITION = keccak256("diamond.storage.proposal.storage");

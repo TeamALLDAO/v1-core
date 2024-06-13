@@ -1,6 +1,6 @@
 // SPDX-Licence-Identifier: UNLICENSED
 
-pragma solidity 0.8.19;
+pragma solidity 0.8.20;
 
 import {IProfile} from "./interfaces/IProfile.sol";
 import {IALLDAO_Governor} from "./interfaces/IALLDAO_Governor.sol";
