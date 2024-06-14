@@ -4,7 +4,9 @@ pragma solidity 0.8.20;
 
 import {SafeCast} from "openzeppelin/utils/math/SafeCast.sol";
 import {Strings} from "openzeppelin/utils/Strings.sol";
-import {ERC20Votes} from "openzeppelin/token/ERC20/extensions/ERC20Votes.sol";
+import {ERC20Votes, ERC20} from "openzeppelin/token/ERC20/extensions/ERC20Votes.sol";
+import {EIP712} from "openzeppelin/utils/cryptography/EIP712.sol";
+import {Time} from "openzeppelin/utils/types/Time.sol";
 
 import {IDAO_Token} from "./interfaces/IDAO_Token.sol";
 import {IEventRegister} from "./interfaces/IEventRegister.sol";
@@ -15,20 +17,26 @@ import {IEventRegister} from "./interfaces/IEventRegister.sol";
 contract DAO_Token is IDAO_Token, ERC20Votes {
     using Strings for uint256;
 
+    /// @notice total number of token holders
+    uint256 public holders;
+
     /// @notice the alldao owner address
     address public owner;
 
     /// @notice the address to register updates
-    address public register;
+    IEventRegister public register;
 
     modifier onlyOwner() {
         require(msg.sender == owner, "only owner can call");
         _;
     }
 
-    constructor(address _register, address _owner, string memory _name, string memory _symbol) {
+    constructor(address _register, address _owner, string memory _name, string memory _symbol)
+        ERC20(_name, _symbol)
+        EIP712(_name, "1")
+    {
         owner = _owner;
-        register = _register;
+        register = IEventRegister(_register);
     }
 
     function clock() public view override returns (uint48) {
@@ -50,19 +58,32 @@ contract DAO_Token is IDAO_Token, ERC20Votes {
 
     /// @notice function to mint new tokens
     /// @dev can only be called by the owner of the token i.e the owner
-    /// @param tokenId the id of the token to mint
     /// @param amount the amount to mint
     /// @param to the address to mint the token to
-    /// @param data optional data to pass down to `_afterTokenTransfer`
-    function mint(uint256 tokenId, uint256 amount, address to, bytes memory data) external onlyOwner {
-        _mint(to, amount, data);
+    function mint(address to, uint256 amount) external onlyOwner {
+        _mint(to, amount);
     }
 
     function setRegister(address _register) external onlyOwner {
-        register = _register;
+        register = IEventRegister(_register);
     }
 
-    function getTotalSupply() external view returns (uint256) {}
+    function _update(address from, address to, uint256 value) internal override {
+        uint256 toBalance = balanceOf(to);
+        uint256 beginHolders = holders;
 
-    function _update(address from, address to, uint256 value) internal override {}
+        super._update(from, to, value);
+
+        if (from != address(0) && balanceOf(from) == 0) {
+            holders -= 1;
+        }
+
+        if (to != address(0) && toBalance == 0) {
+            holders += 1;
+        }
+
+        if (holders != beginHolders) {
+            register.registerMemberCount(address(this), block.timestamp, holders);
+        }
+    }
 }

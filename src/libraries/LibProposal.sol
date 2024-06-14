@@ -33,14 +33,12 @@ library LibProposal {
         uint256 proposalId;
         uint256 forVotes;
         uint256 againstVotes;
-
         uint96 proposalCreationTimestamp;
         uint96 voteStartTimestamp;
         uint96 voteEndTimestamp;
         uint96 executionTimestamp;
         ProposalStatus proposalStatus;
         address proposer;
-
         string descriptionURI;
         Call calls;
     }

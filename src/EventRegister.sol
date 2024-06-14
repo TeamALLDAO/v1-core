@@ -30,4 +30,6 @@ contract EventRegister is IEventRegister {
     function registerRemoveFunction(bytes4[] memory selector, address facet) external {}
 
     function registerReplaceFunction(bytes4[] memory selector, address facet) external {}
+
+    function registerMemberCount(address dao, uint256 timestamp, uint256 amount) external {}
 }

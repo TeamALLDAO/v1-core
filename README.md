@@ -9,6 +9,7 @@
 -   DAO_Governor
 -   ALLDAO_Governor
 -   Payment
+-   EventRegister
 -   *the rest essentials
 
 

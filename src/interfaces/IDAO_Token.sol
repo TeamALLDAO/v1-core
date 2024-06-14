@@ -4,7 +4,7 @@ pragma solidity 0.8.20;
 
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
-import {IVotes} from "openzeppelin/governance/utils/IVotes.sol"
+import {IVotes} from "openzeppelin/governance/utils/IVotes.sol";
 
 /// @title the interface for the DAO_Token
 /// @author Mfon Stephen Nwa
@@ -20,9 +20,7 @@ interface IDAO_Token is IERC20, IERC20Metadata, IVotes {
 
     function owner() external view returns (address);
 
-    function getTotalSupply() external view returns (uint256);
-
     function setRegister(address _register) external;
 
-    function mint(uint256 tokenId, uint256 amount, address to, bytes memory data) external;
+    function mint(address to, uint256 amount) external;
 }

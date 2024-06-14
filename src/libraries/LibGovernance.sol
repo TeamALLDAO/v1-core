@@ -29,7 +29,6 @@ library LibGovernance {
     }
 
     struct GovernanceStorage {
-        uint256 members;
         address[] proposers;
         address[] executors;
         address register;
