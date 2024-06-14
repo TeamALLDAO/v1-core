@@ -11,29 +11,23 @@ interface IEventRegister {
 
     event ProposalCancelled();
 
-    function registerVoteUpdate(
-        address dao,
-        address sender,
-        uint256 senderBalance,
-        address reciever,
-        uint256 recieverBalance
-    ) external;
+    function registerCreateDao() external;
 
     function registerUpdatedGovernanceURI(address dao, string memory newURI) external;
 
-    function registerProposal(
-        address dao,
-        address proposer,
-        string memory proposalURI,
-        LibProposal.Call memory calls,
-        uint256 timestampCreated
-    ) external;
+    function registerProposal(address dao, LibProposal.Proposal memory proposal) external;
 
-    function registerProposalState(uint256 proposalId, uint8 proposalState) external;
+    function registerProposalState(address dao, LibProposal.ProposalStatus proposalState) external;
 
     function registerAddFunction(bytes4[] memory selector, address facet) external;
 
     function registerRemoveFunction(bytes4[] memory selector, address facet) external;
 
     function registerReplaceFunction(bytes4[] memory selector, address facet) external;
+
+    function registerMemberUpdate() external;
+
+    function regisgterPayment() external;
+
+    function registerPaymentUpdate() external;
 }
