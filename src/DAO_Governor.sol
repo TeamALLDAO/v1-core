@@ -43,7 +43,7 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
 
     modifier onlyGovernance() {
         LibGovernance.GovernanceStorage storage govStorage = LibGovernance.governanceStorage();
-        DoubleEndedQueue.Bytes32Deque memory govCall = govStorage.governanceCall;
+        DoubleEndedQueue.Bytes32Deque storage govCall = govStorage.governanceCall;
         if (msg.sender != address(this)) revert OnlyGovernance();
         bytes32 msgDataHash = keccak256(msg.data);
         // loop until popping the expected operation - throw if deque is empty (operation not authorized)
@@ -69,7 +69,7 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
 
     function isMember(address user) external view returns (bool) {
         IDAO_Token token = IDAO_Token(LibGovernance.token());
-        return token.balanceOf(user, 0) > 0;
+        return token.balanceOf(user) > 0;
     }
 
     /// @notice gets the user shares in percent
@@ -78,32 +78,18 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
     /// @return `uint8` the user shares
     function getShares(address user) external view returns (uint256) {
         IDAO_Token token = IDAO_Token(LibGovernance.token());
-        uint256 totalSupply = token.getTotalSupply();
-        uint256 owned = token.balanceOf(user, 0);
+        uint256 totalSupply = token.totalSupply();
+        uint256 owned = token.getVotes(user);
         if (owned == 0) return 0;
-        return (totalSupply / owned) * 100;
+        return totalSupply * 100 / owned;
     }
 
     function getProposal(uint256 proposalId) external view returns (LibProposal.Proposal memory proposal) {
         proposal = LibProposal.getProposal(proposalId);
     }
 
-    function getDeployment(string memory name) internal view returns (address deploymentAddress) {}
-
-    function proposeListing(string memory _descriptionURI, IListing.ListingRequest memory listingRequest) external {
-        address listingContract = LibGovernance.getDeployment("Listing");
-        bytes memory data = abi.encodeWithSignature("createListing(ListingRequest)", listingRequest);
-        LibProposal.Call memory call = LibProposal.Call({targetAddress: listingContract, targetCalldata: data});
-        _propose(msg.sender, _descriptionURI, call);
-    }
-
-    function proposeListings(string memory _descriptionURI, IListing.ListingRequest[] memory listingRequests)
-        external
-    {
-        address listingContract = LibGovernance.getDeployment("Listing");
-        bytes memory data = abi.encodeWithSignature("createListings(ListingRequest[])", listingRequests);
-        LibProposal.Call memory call = LibProposal.Call({targetAddress: listingContract, targetCalldata: data});
-        _propose(msg.sender, _descriptionURI, call);
+    function getDeployment(string memory name) external view returns (address deploymentAddress) {
+        return LibGovernance.getDeployment(name);
     }
 
     function proposePayment(string memory _descriptionURI, IPayment.PaymentRequest memory paymentRequest) external {
@@ -195,14 +181,6 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
         LibProposal.castVote(proposalId, user, vote, userVotingRight);
     }
 
-    function _hashProposal(string memory description, LibProposal.Call memory calls)
-        private
-        pure
-        returns (uint256 proposalId)
-    {
-        proposalId = uint256(keccak256(abi.encode(description, calls)));
-    }
-
     function _propose(address proposer, string memory _descriptionURI, LibProposal.Call memory _call)
         private
         returns (uint256)
@@ -251,8 +229,6 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
         IDAO_Token token = IDAO_Token(LibGovernance.token());
         token.setRegister(register);
     }
-
-    function addDeployment() external onlyGovernance {}
 
     function addFunctions(address facetAddress, bytes4[] memory functionSelectors) external onlyGovernance {}
 
