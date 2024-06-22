@@ -44,6 +44,7 @@ library LibProposal {
     }
 
     struct Proposals {
+        uint256 currentId;
         mapping(uint256 => Proposal) proposals;
         mapping(address => mapping(uint256 => Vote)) votes;
     }
@@ -60,15 +61,27 @@ library LibProposal {
         return ps.proposals[proposalId];
     }
 
-    function setProposal(uint256 proposalId, Proposal memory proposal) internal {
+    function getCurrentId() internal view returns (uint256) {
         Proposals storage ps = proposalStorage();
+        return ps.currentId;
+    }
+
+    function getProposalExecutables(uint256 proposalId)
+        internal
+        view
+        returns (address[] memory targets, uint256[] memory values, bytes[] memory calldatas)
+    {}
+
+    function propose(Proposal memory proposal) internal {
+        Proposals storage ps = proposalStorage();
+        uint256 proposalId = ps.currentId;
+        proposal.proposalId = proposalId;
         if (ps.proposals[proposalId].proposalStatus != ProposalStatus.None) {
             revert ProposalExists(proposalId);
         }
         ps.proposals[proposalId] = proposal;
+        ps.currentId += 1;
     }
-
-    function hashProposal() internal returns (uint256) {}
 
     function updateProposal(uint256 proposalId) internal {}
 

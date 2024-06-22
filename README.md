@@ -5,7 +5,7 @@
 
 # contract completion schedule
 
--   DAOToken
+-   DAOToken - done
 -   DAO_Governor
 -   ALLDAO_Governor
 -   Payment

@@ -90,9 +90,7 @@ library LibGovernance {
         gs.deploymentAddresses[name] = deployment;
     }
 
-    function createDeployment() internal {
-
-    }
+    function createDeployment() internal {}
 
     function ensureIsProposer(address user) internal view {
         GovernanceStorage storage gs = governanceStorage();
