@@ -42,6 +42,9 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
     error CannotCancel_VotingStarted(uint256 proposalId);
     error OnlyGovernance();
 
+    uint256 constant MAXQUORUM = 1e18;
+    uint256 constant MINQUORUM = 0.5e18;
+
     modifier onlyGovernance() {
         LibGovernance.GovernanceStorage storage govStorage = LibGovernance.governanceStorage();
         DoubleEndedQueue.Bytes32Deque storage govCall = govStorage.governanceCall;
@@ -52,31 +55,32 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
         _;
     }
 
-    constructor(string memory _uri, LibGovernance.Deployment[] memory deployments, address _register) {
-        // LibGovernance.addDeployment();
-        // bytes memory data = abi.encodeWithSignature(signatureString, arg);
-        // LibDiamond.initializeDiamondCut(init, data);
-        LibDiamond.setContractOwner(address(this));
-        LibGovernance.setURI(_uri);
-        LibGovernance.setRegister(_register);
+    // constructor(string memory _uri, LibGovernance.Deployment[] memory deployments, address _register) {
+    //     // LibGovernance.addDeployment();
+    //     // bytes memory data = abi.encodeWithSignature(signatureString, arg);
+    //     // LibDiamond.initializeDiamondCut(init, data);
+    //     LibDiamond.setContractOwner(address(this));
+    //     LibGovernance.setURI(_uri);
+    //     LibGovernance.setRegister(_register);
 
-        // IDAO_Token.allowance.selector;
-        // deploy the token
-    }
+    //     // IDAO_Token.allowance.selector;
+    //     // deploy the token
+    // }
 
     /// Public Functions
 
-    function quorum(uint256 timepoint) public view virtual returns (uint256) {
-        
+    function hashProposal(
+        address target,
+        uint256 value,
+        bytes memory call_data,
+        string memory descriptionURI
+    ) public pure returns (uint256) {
+        return uint256(keccak256(abi.encode(target, value, call_data, descriptionURI)));
     }
 
-    function hashProposal(
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas,
-        string descriptionURI
-    ) public pure virtual returns (uint256) {
-        return uint256(keccak256(abi.encode(targets, values, calldatas, descriptionURI)));
+    function quorum(uint256 timepoint) public view virtual returns (uint256) {
+        LibGovernance.GovernanceStorage storage govStorage = LibGovernance.governanceStorage();
+        return govStorage.governorSetting.quorumFraction;
     }
     
     // External Functions
@@ -87,7 +91,7 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
 
     function isMember(address user) external view returns (bool) {
         IDAO_Token token = IDAO_Token(LibGovernance.token());
-        return token.balanceOf(user) > 0;
+        return token.getVotes(user) > 0;
     }
 
     function getSharesPercent(address user) external view returns (uint256) {
@@ -137,7 +141,7 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
         _castVote(msg.sender, proposalId, vote);
     }
 
-    function voteReciept(uint256 proposalId) external returns (LibProposal.Vote vote) {
+    function voteReciept(uint256 proposalId) external view returns (LibProposal.Vote vote) {
         vote = LibProposal.viewVote(msg.sender, proposalId);
     }
 
@@ -151,6 +155,14 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
     function relay(address target, uint256 value, bytes calldata data) external payable onlyGovernance {
         (bool success, bytes memory returndata) = target.call{value: value}(data);
         Address.verifyCallResult(success, returndata, "Governor: relay reverted without message");
+    }
+
+    function setQuorumFraction(uint256 quorum) external onlyGovernance {
+        if (quorum >= MAXQUORUM || quorum <= MINQUORUM) {
+            revert;
+        }
+        LibGovernance.GovernanceStorage storage govStorage = LibGovernance.governanceStorage();
+        govStorage.governorSetting.quorumFraction = quorum;
     }
 
     function setURI(string memory URI) external onlyGovernance {
@@ -243,12 +255,18 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
         LibGovernance.GovernanceStorage storage govStorage = LibGovernance.governanceStorage();
         LibGovernance.GovernanceSetting memory govSetting = govStorage.governorSetting;
 
+        uint256 proposalId_new = hashProposal(_call.targetAddress, _call.value, _call.targetCalldata, _descriptionURI);
+        LibProposal.Proposals storage ps = LibProposal.proposalStorage();
+        
+        if (ps.proposals[proposalId_new].proposalStatus != LibProposal.ProposalStatus.None) {
+            revert ProposalIdExists(proposalId_new);
+        }
         uint256 votingDelay = govSetting.votingDelay;
         uint256 votingPeriod = govSetting.votingPeriod;
         uint256 executionDelay = govSetting.executionDelay;
 
         LibProposal.Proposal memory proposal = LibProposal.Proposal({
-            proposalId: 0,
+            proposalId: proposalId_new,
             forVotes: 0,
             againstVotes: 0,
             proposalCreationTimestamp: block.timestamp,

@@ -11,25 +11,22 @@ import {LibProposal} from "../libraries/LibProposal.sol";
 /// @notice Explain to an end user what this does
 /// @dev Explain to a developer any extra details
 interface IDAO_Governor {
-    // event Proposed(address proposer, uint256 proposalID, string, Proposal proposal);
-    // event ProposalCancelled(address canceller, uint256 proposalID, Proposal proposal);
-    // event ProposalExecuted(address executor, uint256 proposalID, Proposal proposal);
-    // event ProposalWon(uint256 proposalID, Proposal proposal, Result results);
-    // event ProposalLost(uint256 proposalID, Proposal proposal, Result results);
-    // event Voted(address voter, uint256 proposalID, Proposal proposal, Vote vote);
-    // event RelayedCall(address target, uint256 value, bytes, Relay relayType);
-    // event UpdatedURI(string oldURI, string newURI);
-
-    struct Shares {
-        address shareholder;
-        uint8 shares;
-    }
-
     event Proposed();
 
     event ProposalCancelled();
 
     event ProposalExecuted();
+
+    function hashProposal(
+        address target,
+        uint256 value,
+        bytes memory call_data,
+        string memory descriptionURI
+    ) public pure returns (uint256);
+
+    function quorum(uint256 timepoint) public view virtual returns (uint256);
+
+    function setQuorumFraction(uint256 quorum) external;
 
     function uri() external view returns (string memory);
 

@@ -12,4 +12,11 @@ interface IEventRegister {
     event ProposalCancelled();
 
     function registerMemberCount(address dao, uint256 timestamp, uint256 amount) external;
+    function registerProposal(
+        address dao,
+        address proposer,
+        string memory proposalURI,
+        LibProposal.Call memory calls,
+        uint256 timestampCreated
+    ) external;
 }

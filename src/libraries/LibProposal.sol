@@ -27,6 +27,7 @@ library LibProposal {
     struct Call {
         address targetAddress;
         bytes targetCalldata;
+        uint256 value;
     }
 
     struct Proposal {
