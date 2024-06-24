@@ -17,12 +17,10 @@ interface IDAO_Governor {
 
     event ProposalExecuted();
 
-    function hashProposal(
-        address target,
-        uint256 value,
-        bytes memory call_data,
-        string memory descriptionURI
-    ) public pure returns (uint256);
+    function hashProposal(address target, uint256 value, bytes memory call_data, string memory descriptionURI)
+        public
+        pure
+        returns (uint256);
 
     function quorum(uint256 timepoint) public view virtual returns (uint256);
 

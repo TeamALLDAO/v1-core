@@ -8,6 +8,8 @@ import {Address} from "openzeppelin/utils/Address.sol";
 import {ERC1155Holder} from "openzeppelin/token/ERC1155/utils/ERC1155Holder.sol";
 import {ERC721Holder} from "openzeppelin/token/ERC721/utils/ERC721Holder.sol";
 import {DoubleEndedQueue} from "openzeppelin/utils/structs/DoubleEndedQueue.sol";
+import {EIP712} from "openzeppelin/utils/cryptography/EIP712.sol";
+import {IERC165, ERC165} from "openzeppelin/utils/introspection/ERC165.sol";
 
 /// Interfaces
 
@@ -24,11 +26,12 @@ import {DAO_Token} from "./DAO_Token.sol";
 
 import {LibDiamond, IDiamond} from "./libraries/LibDiamond.sol";
 import {LibGovernance, LibProposal} from "./libraries/LibGovernance.sol";
+import {LibNonce} from "./libraries/LibNonce.sol";
 
 /// @title DAO Governor Contract
 /// @author Mfon Stephen Nwa
 /// @notice The DAO contract implementation
-contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
+contract DAO_Governor is ERC165, EIP712, IDAO_Governor, ERC1155Holder, ERC721Holder {
     using DoubleEndedQueue for DoubleEndedQueue.Bytes32Deque;
 
     error ProposalIdExists(uint256);
@@ -44,6 +47,20 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
 
     uint256 constant MAXQUORUM = 1e18;
     uint256 constant MINQUORUM = 0.5e18;
+    bytes32 private constant PROPOSE_PAYMENT_TYPEHASH = keccak256(
+        "ProposePayment(address proposer,string descriptionURI,PaymentRequest paymentRequest,uint256 nonce,uint256 deadline)"
+    );
+    bytes32 private constant PROPOSE_PAYMENTS_TYPEHASH = keccak256(
+        "ProposePayments(address proposer,string descriptionURI,PaymentRequest[] paymentRequests,uint256 nonce,uint256 deadline)"
+    );
+    bytes32 private constant PROPOSE_TYPEHASH =
+        keccak256("Propose(address proposer,string descriptionURI,Call call,uint256 nonce,uint256 deadline)");
+    bytes32 private constant CANCEL_PROPOSAL_TYPEHASH =
+        keccak256("CancelProposal(address proposer,uint256 proposalId,uint256 nonce,uint256 deadline)");
+    bytes32 private constant CAST_VOTE_TYPEHASH =
+        keccak256("CastVote(address voter,uint256 proposalId,Vote vote,uint256 nonce,uint256 deadline)");
+    bytes32 private constant EXECUTE_TYPEHASH =
+        keccak256("Execute(address executor,uint256 proposalId,uint256 nonce,uint256 deadline)");
 
     modifier onlyGovernance() {
         LibGovernance.GovernanceStorage storage govStorage = LibGovernance.governanceStorage();
@@ -69,12 +86,16 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
 
     /// Public Functions
 
-    function hashProposal(
-        address target,
-        uint256 value,
-        bytes memory call_data,
-        string memory descriptionURI
-    ) public pure returns (uint256) {
+    function supportsInterface(bytes4 _interfaceId) external view override returns (bool) {
+        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
+        return ds.supportedInterfaces[_interfaceId];
+    }
+
+    function hashProposal(address target, uint256 value, bytes memory call_data, string memory descriptionURI)
+        public
+        pure
+        returns (uint256)
+    {
         return uint256(keccak256(abi.encode(target, value, call_data, descriptionURI)));
     }
 
@@ -82,7 +103,7 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
         LibGovernance.GovernanceStorage storage govStorage = LibGovernance.governanceStorage();
         return govStorage.governorSetting.quorumFraction;
     }
-    
+
     // External Functions
 
     function uri() external view returns (string memory) {
@@ -110,11 +131,42 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
         return LibGovernance.getDeployment(name);
     }
 
+    function getNonce(address owner) external view returns (uint256) {
+        return LibNonce.nonces(owner);
+    }
+
     function proposePayment(string memory _descriptionURI, IPayment.PaymentRequest memory paymentRequest) external {
         address paymentContract = LibGovernance.getDeployment("Payment");
         bytes memory data = abi.encodeWithSelector(IPayment.createPayment.selector, paymentRequest);
         LibProposal.Call memory call = LibProposal.Call({targetAddress: paymentContract, targetCalldata: data});
         _propose(msg.sender, _descriptionURI, call);
+    }
+
+    function proposePaymentBySig(
+        address proposer,
+        string memory descriptionURI,
+        IPayment.PaymentRequest memory paymentRequest,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        bytes32 structHash = keccak256(
+            abi.encode(
+                PROPOSE_PAYMENT_TYPEHASH,
+                proposer,
+                descriptionURI,
+                paymentRequest,
+                LibNonce.useNonce(proposer),
+                deadline
+            )
+        );
+        _verify_struct_hash(deadline, proposer, structHash);
+
+        address paymentContract = LibGovernance.getDeployment("Payment");
+        bytes memory data = abi.encodeWithSelector(IPayment.createPayment.selector, paymentRequest);
+        LibProposal.Call memory call = LibProposal.Call({targetAddress: paymentContract, targetCalldata: data});
+        _propose(proposer, descriptionURI, call);
     }
 
     function proposePayments(string memory _descriptionURI, IPayment.PaymentRequest[] memory paymentRequests)
@@ -126,8 +178,52 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
         _propose(msg.sender, _descriptionURI, call);
     }
 
-    function propose(string memory _descriptionURI, LibProposal.Call memory _call) external returns (uint256) {
-        _propose(msg.sender, _descriptionURI, _call);
+    function proposePaymentsBySig(
+        address proposer,
+        string memory descriptionURI,
+        IPayment.PaymentRequest[] memory paymentRequests,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        bytes32 structHash = keccak256(
+            abi.encode(
+                PROPOSE_PAYMENT_TYPEHASH,
+                proposer,
+                descriptionURI,
+                paymentRequests,
+                LibNonce.useNonce(proposer),
+                deadline
+            )
+        );
+        _verify_struct_hash(deadline, proposer, structHash);
+        address paymentContract = LibGovernance.getDeployment("Payment");
+        bytes memory data = abi.encodeWithSelector(IPayment.createPayments.selector, paymentRequests);
+        LibProposal.Call memory call = LibProposal.Call({targetAddress: paymentContract, targetCalldata: data});
+        _propose(proposer, descriptionURI, call);
+    }
+
+    function propose(string memory descriptionURI, LibProposal.Call memory _call) external returns (uint256) {
+        _propose(msg.sender, descriptionURI, _call);
+    }
+
+    function proposeBySig(
+        address proposer,
+        string memory descriptionURI,
+        LibProposal.Call memory call,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external returns (uint256) {
+
+        bytes32 structHash = keccak256(
+            abi.encode(PROPOSE_PAYMENT_TYPEHASH, proposer, descriptionURI, call, LibNonce.useNonce(proposer), deadline)
+        );
+
+        _verify_struct_hash(deadline, proposer, structHash);
+        _propose(proposer, descriptionURI, _call);
     }
 
     function cancelProposal(uint256 proposalId) external {
@@ -137,8 +233,37 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
         proposal.proposalStatus = LibProposal.ProposalStatus.Cancelled;
     }
 
+    function cancelProposalBySig(address proposer, uint256 proposalId, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        external
+    {
+        bytes32 structHash =
+            keccak256(abi.encode(CANCEL_PAYMENT_TYPEHASH, proposer, proposalId, LibNonce.useNonce(proposer), deadline));
+
+        _verify_struct_hash(deadline, proposer, structHash);
+
+        LibProposal.Proposal storage proposal = LibProposal.getProposal(proposalId);
+        if (proposal.proposer != proposer) revert NotTheProposer(proposer, proposalId);
+        if (proposal.proposalStatus != LibProposal.ProposalStatus.Delay) revert CannotCancel_VotingStarted(proposalId);
+        proposal.proposalStatus = LibProposal.ProposalStatus.Cancelled;
+    }
+
     function castVote(uint256 proposalId, LibProposal.Vote vote) external {
         _castVote(msg.sender, proposalId, vote);
+    }
+
+    function castVoteBySig(
+        address voter,
+        uint256 proposalId,
+        LibProposal.Vote vote,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        bytes32 structHash =
+            keccak256(abi.encode(CAST_VOTE_TYPEHASH, voter, descriptionURI, call, LibNonce.useNonce(voter), deadline));
+        _verify_struct_hash(deadline, voter, structHash);
+        _castVote(voter, proposalId, vote);
     }
 
     function voteReciept(uint256 proposalId) external view returns (LibProposal.Vote vote) {
@@ -146,11 +271,21 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
     }
 
     function execute(uint256 proposalId) external {
-        (address[] memory targets, uint256[] memory values, bytes[] memory calldatas,) =
-            LibProposal.getProposalExecutables(proposalId);
+        _execute(msg.sender, uint256 proposalId);
     }
 
-        /// Core Governance Functions
+    function executeBySig(address executor, uint256 proposalId, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        external
+    {
+        bytes32 structHash =
+            keccak256(abi.encode(EXECUTE_PAYMENT_TYPEHASH, executor, proposalId, LibNonce.useNonce(executor), deadline));
+
+        _verify_struct_hash(deadline, executor, structHash);
+        _execute(executor, proposalId, deadline);
+
+    }
+
+    /// Core Governance Functions
 
     function relay(address target, uint256 value, bytes calldata data) external payable onlyGovernance {
         (bool success, bytes memory returndata) = target.call{value: value}(data);
@@ -175,17 +310,11 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
         token.setRegister(register);
     }
 
-    function addFunctions(address facetAddress, bytes4[] memory functionSelectors) external onlyGovernance {
+    function addFunctions(address facetAddress, bytes4[] memory functionSelectors) external onlyGovernance {}
 
-    }
+    function removeFunctions(address facetAddress, bytes4[] memory functionSelectors) external onlyGovernance {}
 
-    function removeFunctions(address facetAddress, bytes4[] memory functionSelectors) external onlyGovernance {
-
-    }
-
-    function replaceFunctions(address facetAddress, bytes4[] memory functionSelectors) external onlyGovernance {
-
-    }
+    function replaceFunctions(address facetAddress, bytes4[] memory functionSelectors) external onlyGovernance {}
 
     /// @notice fallback function
     /// @dev Find facet for function that is called and execute the
@@ -221,7 +350,7 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
 
     // Private Functions
 
-    function _castVote(address user, uint256 proposalId, LibProposal.Vote vote) private {
+    function _castVote(address voter, uint256 proposalId, LibProposal.Vote vote) private {
         LibProposal.Proposal storage proposal = LibProposal.getProposal(proposalId);
         uint256 voteStartTimestamp = proposal.voteStartTimestamp;
         uint256 voteEndTimestamp = proposal.voteEndTimestamp;
@@ -244,7 +373,7 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
         if (userVotingRight <= 0) revert NoVotingRights(msg.sender, proposalId);
 
         proposal.proposalStatus = LibProposal.ProposalStatus.Active;
-        LibProposal.castVote(proposalId, user, vote, userVotingRight);
+        LibProposal.castVote(proposalId, voter, vote, userVotingRight);
     }
 
     function _propose(address proposer, string memory _descriptionURI, LibProposal.Call memory _call)
@@ -257,7 +386,7 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
 
         uint256 proposalId_new = hashProposal(_call.targetAddress, _call.value, _call.targetCalldata, _descriptionURI);
         LibProposal.Proposals storage ps = LibProposal.proposalStorage();
-        
+
         if (ps.proposals[proposalId_new].proposalStatus != LibProposal.ProposalStatus.None) {
             revert ProposalIdExists(proposalId_new);
         }
@@ -282,5 +411,18 @@ contract DAO_Governor is IDAO_Governor, ERC1155Holder, ERC721Holder {
         IEventRegister(govStorage.register).registerProposal(
             address(this), proposer, _descriptionURI, _call, block.timestamp
         );
+    }
+
+    function _execute(address executor) private {}
+
+    function _verify_struct_hash(uint256 deadline, address proposer, bytes32 structHash) private {
+        if (block.timestamp > deadline) {
+            revert ERC2612ExpiredSignature(deadline);
+        }
+        bytes32 hash = _hashTypedDataV4(structHash);
+        address signer = ECDSA.recover(hash, v, r, s);
+        if (signer != proposer) {
+            revert ERC2612InvalidSigner(signer, proposer);
+        }
     }
 }

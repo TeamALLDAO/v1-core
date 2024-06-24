@@ -120,8 +120,6 @@ library LibGovernance {
         if (!isExecutor) revert IsNotProposer(user);
     }
 
-    function ensureValidShares() internal view {}
-
     function setProposers(address[] memory proposers) internal {
         GovernanceStorage storage gs = governanceStorage();
         gs.proposers = proposers;
@@ -136,12 +134,4 @@ library LibGovernance {
         GovernanceStorage storage gs = governanceStorage();
         gs.register = register;
     }
-
-    function propose() internal {}
-
-    function cancelProposal() internal {}
-
-    function castVote() internal {}
-
-    function execute() internal {}
 }
