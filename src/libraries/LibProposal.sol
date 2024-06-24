@@ -41,7 +41,7 @@ library LibProposal {
         ProposalStatus proposalStatus;
         address proposer;
         string descriptionURI;
-        Call calls;
+        Call callStruct;
     }
 
     struct Proposals {

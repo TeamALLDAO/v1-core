@@ -33,8 +33,7 @@ library LibGovernance {
         address[] executors;
         address register;
         GovernanceSetting governorSetting;
-        string[] deployments;
-        mapping(string => address) deploymentAddresses;
+        mapping(string => address) deployments;
         DoubleEndedQueue.Bytes32Deque governanceCall;
         string uri;
     }
@@ -60,37 +59,37 @@ library LibGovernance {
         tokenAddress = getDeployment("token");
     }
 
-    function addDeployment(Deployment[] memory deployments) internal {
+    function addDeployment(address[] memory addresses, string[] memory names) internal {
         GovernanceStorage storage gs = governanceStorage();
-        for (uint256 i; i < deployments.length; ++i) {
-            if (gs.deploymentAddresses[deployments[i].name] != address(0)) revert DeploymentExists(deployments[i].name);
-            gs.deployments.push(deployments[i].name);
-            gs.deploymentAddresses[deployments[i].name] = deployments[i].deploymentAddress;
+        if (addresses.length != names.length) {
+            revert;
+        }
+
+        for (uint256 i; i < names.length; ++i) {
+            if (gs.deployments[names[i]] != address(0)) revert DeploymentExists(deployments[i].name);
+            gs.deployments[names[i]] = addresses[i];
         }
     }
 
     function getDeployment(string memory name) internal view returns (address deploymentAddress) {
         GovernanceStorage storage gs = governanceStorage();
-        deploymentAddress = gs.deploymentAddresses[name];
+        deploymentAddress = gs.deployments[name];
         if (deploymentAddress == address(0)) revert DeploymentDoesNotExist(name);
     }
 
     function deleteDeployment(string memory name) internal {
         GovernanceStorage storage gs = governanceStorage();
-        address deploymentAddress = gs.deploymentAddresses[name];
+        address deploymentAddress = gs.deployments[name];
         if (deploymentAddress == address(0)) revert DeploymentDoesNotExist(name);
-        // todo delete name
-        delete gs.deploymentAddresses[name];
+        delete gs.deployments[name];
     }
 
     function updateDeployment(string memory name, address deployment) internal {
         GovernanceStorage storage gs = governanceStorage();
-        address deploymentAddress = gs.deploymentAddresses[name];
+        address deploymentAddress = gs.deployments[name];
         if (deploymentAddress == address(0)) revert DeploymentDoesNotExist(name);
-        gs.deploymentAddresses[name] = deployment;
+        gs.deployments[name] = deployment;
     }
-
-    function createDeployment() internal {}
 
     function ensureIsProposer(address user) internal view {
         GovernanceStorage storage gs = governanceStorage();
