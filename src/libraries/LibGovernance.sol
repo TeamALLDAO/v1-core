@@ -15,6 +15,12 @@ error DeploymentDoesNotExist(string);
 library LibGovernance {
     bytes32 constant GOVERNANCE_STORAGE_POSITION = keccak256("diamond.storage.governance.storage");
 
+    struct DiamondArgs {
+        address owner;
+        address init;
+        bytes initCalldata;
+    }
+
     struct Deployment {
         string name;
         address deploymentAddress;
@@ -31,7 +37,6 @@ library LibGovernance {
     struct GovernanceStorage {
         address[] proposers;
         address[] executors;
-        address register;
         GovernanceSetting governorSetting;
         mapping(string => address) deployments;
         DoubleEndedQueue.Bytes32Deque governanceCall;
@@ -66,7 +71,8 @@ library LibGovernance {
         }
 
         for (uint256 i; i < names.length; ++i) {
-            if (gs.deployments[names[i]] != address(0)) revert DeploymentExists(deployments[i].name);
+            address tempAddress = gs.deployments[names[i]];
+            if (tempAddress != address(0)) revert DeploymentExists(tempAddress);
             gs.deployments[names[i]] = addresses[i];
         }
     }
@@ -127,10 +133,5 @@ library LibGovernance {
     function setExecutors(address[] memory executors) internal {
         GovernanceStorage storage gs = governanceStorage();
         gs.executors = executors;
-    }
-
-    function setRegister(address register) internal {
-        GovernanceStorage storage gs = governanceStorage();
-        gs.register = register;
     }
 }

@@ -30,12 +30,12 @@ interface IDAO_Governor {
 
     function isMember(address user) external view returns (bool);
 
-    function getShares(address user) external view returns (uint256);
+    function getSharesPercent(address user) external view returns (uint256);
 
-    function proposeListing(string memory _descriptionURI, IListing.ListingRequest memory listingRequest) external;
+    // function proposeListing(string memory _descriptionURI, IListing.ListingRequest memory listingRequest) external;
 
-    function proposeListings(string memory _descriptionURI, IListing.ListingRequest[] memory listingRequests)
-        external;
+    // function proposeListings(string memory _descriptionURI, IListing.ListingRequest[] memory listingRequests)
+    //     external;
 
     function proposePayment(string memory _descriptionURI, IPayment.PaymentRequest memory paymentRequest) external;
 

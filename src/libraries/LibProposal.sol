@@ -73,6 +73,24 @@ library LibProposal {
         returns (address[] memory targets, uint256[] memory values, bytes[] memory calldatas)
     {}
 
+    function getState(uint256 proposalId) internal returns (ProposalStatus) {
+        Proposal storage proposal = getProposal(proposalId);
+        updateState(proposal);
+        return proposal.proposalStatus;
+    }
+
+    function updateState(Proposal storage proposal) internal {
+        ProposalStatus state = proposal.proposalStatus;
+        if (state != ProposalStatus.Cancelled && state != ProposalStatus.Executed) {
+            if (block.timestamp >= proposal.voteStartTimestamp && block.timestamp < proposal.voteEndTimestamp) {
+                state = ProposalStatus.Active;
+            } else if (block.timestamp >= proposal.voteEndTimestamp) {
+                // tally the votes and set the state
+            }
+        }
+        proposal.proposalStatus = state;
+    }
+
     function propose(Proposal memory proposal) internal {
         Proposals storage ps = proposalStorage();
         uint256 proposalId = ps.currentId;
@@ -83,8 +101,6 @@ library LibProposal {
         ps.proposals[proposalId] = proposal;
         ps.currentId += 1;
     }
-
-    function updateProposal(uint256 proposalId) internal {}
 
     function viewVote(address user, uint256 proposalId) internal view returns (Vote) {
         Proposals storage ps = proposalStorage();

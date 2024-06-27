@@ -6,6 +6,11 @@ import "./IDAO_Governor.sol";
 import "./IEventRegister.sol";
 
 interface IALLDAO_Governor is IDAO_Governor {
+    struct Shares {
+        address user;
+        uint256 percent;
+    }
+
     event DAO_Created(uint256 id, address DAO, string DAO_Name);
 
     function createDAO(string memory daoName, Shares[] memory shares) external;
